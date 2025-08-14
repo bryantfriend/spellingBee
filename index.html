@@ -19,7 +19,6 @@
         .btn-primary { @apply bg-indigo-600 hover:bg-indigo-500 transform hover:scale-105; }
         .btn-secondary { @apply bg-sky-600 hover:bg-sky-500 transform hover:scale-105; }
         .btn-accent { @apply bg-emerald-600 hover:bg-emerald-500 transform hover:scale-105; }
-        .btn-magic { @apply bg-purple-600 hover:bg-purple-500 transform hover:scale-105; }
         .btn-danger { @apply bg-rose-600 hover:bg-rose-500 transform hover:scale-105; }
         .btn-level { @apply bg-slate-700 hover:bg-slate-600 transform hover:scale-105 w-full; }
         .input-glow:focus {
@@ -77,7 +76,6 @@
                 <button id="repeat-word-btn" class="btn btn-primary"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.536 8.464a5 5 0 000 7.072m2.828-9.9a9 9 0 000 12.728" /></svg>Repeat</button>
                 <button id="sentence-btn" class="btn btn-secondary"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>Sentence</button>
                 <button id="hint-btn" class="btn btn-accent"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 017.072 0" /></svg>Hint</button>
-                <button id="magic-hint-btn" class="btn btn-magic">✨ Magic Hint</button>
             </div>
             
             <form id="spelling-form">
@@ -110,7 +108,6 @@
         const repeatWordBtn = document.getElementById('repeat-word-btn');
         const sentenceBtn = document.getElementById('sentence-btn');
         const hintBtn = document.getElementById('hint-btn');
-        const magicHintBtn = document.getElementById('magic-hint-btn');
         const spellingForm = document.getElementById('spelling-form');
         const spellingInput = document.getElementById('spelling-input');
         const feedbackEl = document.getElementById('feedback');
@@ -238,7 +235,6 @@
         let currentWordIndex = 0;
         let words = [];
         let currentLevel = 1;
-        let isFetchingMagicHint = false;
 
         // --- Gemini API Configuration ---
         const API_KEY = ""; // Leave blank, it will be handled by the environment
@@ -355,7 +351,6 @@
             feedbackEl.className = 'mt-6 text-center text-2xl font-bold h-8';
             hintText.innerHTML = `<span class="italic text-slate-300">Click a hint button for help.</span>`;
             hintBox.classList.remove('bg-purple-900/50', 'bg-emerald-900/50');
-            magicHintBtn.disabled = false;
         }
 
         function updateScore() {
@@ -367,50 +362,6 @@
             progressBar.style.width = `${progress}%`;
         }
 
-        async function getMagicHint() {
-            if (isFetchingMagicHint || currentWordIndex >= words.length) return;
-
-            isFetchingMagicHint = true;
-            magicHintBtn.disabled = true;
-            hintText.innerHTML = `<span class="italic text-slate-300">✨ Thinking of a magic hint...</span>`;
-            hintBox.classList.add('bg-purple-900/50');
-            hintBox.classList.remove('bg-emerald-900/50');
-
-            const currentWord = words[currentWordIndex].word;
-            const prompt = `Give me a very simple and fun clue for a 6th-grade ESL student to guess the word '${currentWord}'. The clue should not use the word itself or its direct definition. Make it one short, creative sentence.`;
-
-            try {
-                const payload = {
-                    contents: [{ role: "user", parts: [{ text: prompt }] }],
-                };
-
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    throw new Error(`API request failed with status ${response.status}`);
-                }
-
-                const result = await response.json();
-                const generatedText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-
-                if (generatedText) {
-                    hintText.innerHTML = `<p class="font-semibold">✨ <span class="font-normal">${generatedText.replace(/\"/g, "")}</span></p>`;
-                } else {
-                    hintText.textContent = 'Could not generate a magic hint. Try the normal hint!';
-                }
-
-            } catch (error) {
-                console.error('Gemini API Error:', error);
-                hintText.textContent = 'Magic hint is unavailable right now. Please try again later.';
-            } finally {
-                isFetchingMagicHint = false;
-                // Keep button disabled after one use per word
-            }
-        }
 
         function handleAnswer(e) {
             e.preventDefault();
@@ -432,7 +383,6 @@
             updateProgressBar();
 
             spellingInput.disabled = true;
-            magicHintBtn.disabled = true; // Disable until next word
             setTimeout(() => {
                 spellingInput.disabled = false;
                 loadNextWord();
@@ -483,8 +433,6 @@
                 hintBox.classList.remove('bg-purple-900/50');
             }
         });
-        
-        magicHintBtn.addEventListener('click', getMagicHint);
 
         spellingForm.addEventListener('submit', handleAnswer);
         playAgainBtn.addEventListener('click', returnToLevelSelect);
