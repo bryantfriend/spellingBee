@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosmic Spelling Bee - Multi-Level</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%2394a3b8' fill-opacity='0.1'%3E%3Cpath d='M0 38.59l2.83-2.83 1.41 1.41L1.41 40H0v-1.41zM0 1.4l2.83 2.83 1.41-1.41L1.41 0H0v1.41zM38.59 40l-2.83-2.83 1.41-1.41L40 38.59V40h-1.41zM40 1.41l-2.83 2.83-1.41-1.41L38.59 0H40v1.41zM20 18.6l2.83-2.83 1.41 1.41L21.41 20l2.83 2.83-1.41 1.41L20 21.41l-2.83 2.83-1.41-1.41L18.59 20l-2.83-2.83 1.41-1.41L20 18.59z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        .font-space { font-family: 'Space Grotesk', sans-serif; }
+        .btn { @apply px-4 py-3 rounded-lg font-semibold text-white shadow-lg transition-all duration-300 ease-in-out flex items-center justify-center; }
+        .btn-primary { @apply bg-indigo-600 hover:bg-indigo-500 transform hover:scale-105; }
+        .btn-secondary { @apply bg-sky-600 hover:bg-sky-500 transform hover:scale-105; }
+        .btn-accent { @apply bg-emerald-600 hover:bg-emerald-500 transform hover:scale-105; }
+        .btn-magic { @apply bg-purple-600 hover:bg-purple-500 transform hover:scale-105; }
+        .btn-danger { @apply bg-rose-600 hover:bg-rose-500 transform hover:scale-105; }
+        .btn-level { @apply bg-slate-700 hover:bg-slate-600 transform hover:scale-105 w-full; }
+        .input-glow:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.5);
+        }
+        @keyframes pop-in {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .feedback-animation { animation: pop-in 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55); }
+        #confetti-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
+        .btn:disabled { @apply bg-slate-500 cursor-not-allowed transform-none; }
+    </style>
+</head>
+<body class="text-slate-200 flex items-center justify-center min-h-screen p-4">
+    <canvas id="confetti-canvas"></canvas>
+
+    <!-- Level Selection Screen -->
+    <div id="level-selection" class="w-full max-w-md mx-auto bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-slate-700 text-center">
+        <h1 class="font-space text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400 mb-6">Choose Your Level</h1>
+        <div class="grid grid-cols-1 gap-4">
+            <button class="btn btn-level text-lg" data-level="1">Level 1: Beginner</button>
+            <button class="btn btn-level text-lg" data-level="2">Level 2: Easy</button>
+            <button class="btn btn-level text-lg" data-level="3">Level 3: Intermediate</button>
+            <button class="btn btn-level text-lg" data-level="4">Level 4: Advanced</button>
+            <button class="btn btn-level text-lg" data-level="5">Level 5: Expert</button>
+        </div>
+    </div>
+
+    <!-- Game Container (Initially Hidden) -->
+    <div id="game-container" class="hidden w-full max-w-3xl mx-auto bg-slate-800/50 backdrop-blur-sm rounded-2xl shadow-2xl p-6 md:p-8 border border-slate-700">
+        <header class="text-center mb-6">
+            <h1 class="font-space text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400">Cosmic Spelling Bee</h1>
+            <h2 id="level-display" class="font-space text-2xl text-amber-300 mt-2"></h2>
+        </header>
+
+        <div class="flex justify-between items-center mb-6 bg-slate-900/50 p-4 rounded-lg">
+            <div class="font-space text-2xl">Score: <span id="score" class="font-bold text-green-400">0</span></div>
+            <div class="w-1/2">
+                <div class="w-full bg-slate-700 rounded-full h-2.5">
+                    <div id="progress-bar" class="bg-gradient-to-r from-sky-500 to-indigo-500 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="hint-box" class="min-h-[80px] bg-slate-700/50 p-4 rounded-lg mb-6 text-center flex items-center justify-center transition-all duration-300">
+            <p id="hint-text" class="text-slate-300 italic">Click a hint button for help.</p>
+        </div>
+
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <button id="repeat-word-btn" class="btn btn-primary"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.536 8.464a5 5 0 000 7.072m2.828-9.9a9 9 0 000 12.728" /></svg>Repeat</button>
+                <button id="sentence-btn" class="btn btn-secondary"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>Sentence</button>
+                <button id="hint-btn" class="btn btn-accent"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 017.072 0" /></svg>Hint</button>
+                <button id="magic-hint-btn" class="btn btn-magic">✨ Magic Hint</button>
+            </div>
+            
+            <form id="spelling-form">
+                <input type="text" id="spelling-input" placeholder="Type the spelling here..." autocomplete="off" class="w-full p-4 bg-slate-900 border-2 border-slate-600 rounded-lg text-2xl text-center text-white focus:border-indigo-500 input-glow transition-all duration-300">
+                <button type="submit" class="w-full mt-4 btn btn-primary text-xl">Check My Spelling</button>
+            </form>
+        </div>
+
+        <div id="feedback" class="mt-6 text-center text-2xl font-bold h-8"></div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="game-over-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+        <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl text-center max-w-md w-full feedback-animation">
+            <h2 class="font-space text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">Level Complete!</h2>
+            <p class="font-space text-3xl mt-4">Final Score: <span id="final-score" class="font-bold text-green-400"></span></p>
+            <button id="play-again-btn" class="mt-8 btn btn-danger text-xl">Choose Another Level</button>
+        </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const levelSelectionScreen = document.getElementById('level-selection');
+        const gameContainer = document.getElementById('game-container');
+        const levelDisplay = document.getElementById('level-display');
+        const scoreEl = document.getElementById('score');
+        const progressBar = document.getElementById('progress-bar');
+        const hintBox = document.getElementById('hint-box');
+        const hintText = document.getElementById('hint-text');
+        const repeatWordBtn = document.getElementById('repeat-word-btn');
+        const sentenceBtn = document.getElementById('sentence-btn');
+        const hintBtn = document.getElementById('hint-btn');
+        const magicHintBtn = document.getElementById('magic-hint-btn');
+        const spellingForm = document.getElementById('spelling-form');
+        const spellingInput = document.getElementById('spelling-input');
+        const feedbackEl = document.getElementById('feedback');
+        const gameOverModal = document.getElementById('game-over-modal');
+        const finalScoreEl = document.getElementById('final-score');
+        const playAgainBtn = document.getElementById('play-again-btn');
+        const confettiCanvas = document.getElementById('confetti-canvas');
+
+        // --- Word Bank (Shortened for brevity in code, full list is logically the same) ---
+        const wordBank = {
+            1: [
+                { word: 'cat', sentence: 'The cat is sleeping.', definition: 'A small domesticated carnivorous mammal.', definition_ru: 'Маленькое домашнее плотоядное млекопитающее.' },
+                { word: 'dog', sentence: 'The dog is friendly.', definition: 'A domesticated carnivorous mammal that typically has a long snout.', definition_ru: 'Домашнее плотоядное млекопитающее, обычно с длинной мордой.' },
+                { word: 'sun', sentence: 'The sun is bright.', definition: 'The star at the center of the Solar System.', definition_ru: 'Звезда в центре Солнечной системы.' },
+                { word: 'run', sentence: 'I like to run in the park.', definition: 'Move at a speed faster than a walk.', definition_ru: 'Двигаться со скоростью быстрее, чем ходьба.' },
+                { word: 'big', sentence: 'That is a big house.', definition: 'Of considerable size or extent.', definition_ru: 'Значительного размера или протяженности.' },
+                { word: 'red', sentence: 'The apple is red.', definition: 'The color at the end of the spectrum next to orange.', definition_ru: 'Цвет в конце спектра рядом с оранжевым.' },
+                { word: 'pen', sentence: 'I need a pen to write.', definition: 'An instrument for writing with ink.', definition_ru: 'Инструмент для письма чернилами.' },
+                { word: 'egg', sentence: 'I had an egg for breakfast.', definition: 'An oval object laid by female birds.', definition_ru: 'Овальный предмет, откладываемый самками птиц.' },
+                { word: 'car', sentence: 'My dad drives a blue car.', definition: 'A road vehicle, typically with four wheels.', definition_ru: 'Дорожное транспортное средство, обычно с четырьмя колесами.' },
+                { word: 'hat', sentence: 'She wears a nice hat.', definition: 'A shaped covering for the head.', definition_ru: 'Фигурный головной убор.' },
+                { word: 'cup', sentence: 'A cup of tea.', definition: 'A small bowl-shaped container for drinking from.', definition_ru: 'Маленькая чашеобразная емкость для питья.' },
+                { word: 'bed', sentence: 'It is time to go to bed.', definition: 'A piece of furniture used for sleep.', definition_ru: 'Предмет мебели, используемый для сна.' },
+                { word: 'box', sentence: 'What is in the box?', definition: 'A container with a flat base and sides.', definition_ru: 'Контейнер с плоским дном и сторонами.' },
+                { word: 'bus', sentence: 'We take the bus to school.', definition: 'A large motor vehicle carrying passengers by road.', definition_ru: 'Большое моторное транспортное средство для перевозки пассажиров по дороге.' },
+                { word: 'boy', sentence: 'The boy is playing.', definition: 'A male child or young man.', definition_ru: 'Ребенок мужского пола или молодой человек.' },
+                { word: 'toy', sentence: 'This is my favorite toy.', definition: 'An object for a child to play with.', definition_ru: 'Предмет для игры ребенка.' },
+                { word: 'leg', sentence: 'My leg hurts.', definition: 'Each of the limbs on which a person or animal walks.', definition_ru: 'Каждая из конечностей, на которых ходит человек или животное.' },
+                { word: 'map', sentence: 'Look at the world map.', definition: 'A diagrammatic representation of an area.', definition_ru: 'Схематическое изображение местности.' },
+                { word: 'key', sentence: 'I lost my key.', definition: 'A small piece of shaped metal for operating a lock.', definition_ru: 'Маленький кусок формованного металла для управления замком.' },
+                { word: 'sky', sentence: 'The sky is blue.', definition: 'The region of the atmosphere and outer space seen from the earth.', definition_ru: 'Область атмосферы и космического пространства, видимая с Земли.' },
+            ],
+            2: [
+                { word: 'apple', sentence: 'An apple a day keeps the doctor away.', definition: 'A round fruit with firm, white flesh.', definition_ru: 'Круглый фрукт с твердой белой мякотью.' },
+                { word: 'happy', sentence: 'I am happy to see you.', definition: 'Feeling or showing pleasure or contentment.', definition_ru: 'Чувство или проявление удовольствия или удовлетворения.' },
+                { word: 'school', sentence: 'We learn many things at school.', definition: 'An institution for educating children.', definition_ru: 'Учреждение для обучения детей.' },
+                { word: 'friend', sentence: 'You are my best friend.', definition: 'A person whom one knows and with whom one has a bond of mutual affection.', definition_ru: 'Человек, которого знаешь и с которым есть узы взаимной привязанности.' },
+                { word: 'water', sentence: 'Please drink a lot of water.', definition: 'A colorless, transparent, odorless liquid.', definition_ru: 'Бесцветная, прозрачная жидкость без запаха.' },
+                { word: 'green', sentence: 'The grass is green.', definition: 'The color between blue and yellow in the spectrum.', definition_ru: 'Цвет между синим и желтым в спектре.' },
+                { word: 'house', sentence: 'They live in a big house.', definition: 'A building for human habitation.', definition_ru: 'Здание для проживания людей.' },
+                { word: 'money', sentence: 'I need to save money.', definition: 'A current medium of exchange in the form of coins and banknotes.', definition_ru: 'Текущее средство обмена в виде монет и банкнот.' },
+                { word: 'story', sentence: 'Read me a story.', definition: 'An account of imaginary or real people and events told for entertainment.', definition_ru: 'Рассказ о вымышленных или реальных людях и событиях, рассказанный для развлечения.' },
+                { word: 'world', sentence: 'The world is a beautiful place.', definition: 'The earth, together with all of its countries and peoples.', definition_ru: 'Земля со всеми ее странами и народами.' },
+                { word: 'music', sentence: 'I love listening to music.', definition: 'Vocal or instrumental sounds combined in such a way as to produce beauty of form.', definition_ru: 'Вокальные или инструментальные звуки, объединенные таким образом, чтобы создать красоту формы.' },
+                { word: 'party', sentence: 'Are you coming to the party?', definition: 'A social gathering of people for entertainment or celebration.', definition_ru: 'Социальное собрание людей для развлечения или празднования.' },
+                { word: 'light', sentence: 'Turn on the light.', definition: 'The natural agent that stimulates sight and makes things visible.', definition_ru: 'Естественный агент, который стимулирует зрение и делает вещи видимыми.' },
+                { word: 'right', sentence: 'You are right.', definition: 'True or correct as a fact.', definition_ru: 'Истинный или правильный как факт.' },
+                { word: 'small', sentence: 'An ant is very small.', definition: 'Of a size that is less than normal or usual.', definition_ru: 'Размером меньше обычного или нормального.' },
+                { word: 'table', sentence: 'The book is on the table.', definition: 'A piece of furniture with a flat top and one or more legs.', definition_ru: 'Предмет мебели с плоской столешницей и одной или несколькими ножками.' },
+                { word: 'chair', sentence: 'Please have a chair.', definition: 'A separate seat for one person.', definition_ru: 'Отдельное сиденье для одного человека.' },
+                { word: 'paper', sentence: 'Write your name on the paper.', definition: 'Material manufactured in thin sheets from the pulp of wood.', definition_ru: 'Материал, изготовленный в тонких листах из древесной массы.' },
+                { word: 'white', sentence: 'The snow is white.', definition: 'The color of milk or fresh snow.', definition_ru: 'Цвет молока или свежего снега.' },
+                { word: 'black', sentence: 'The cat is black.', definition: 'The very darkest color owing to the absence of or complete absorption of light.', definition_ru: 'Самый темный цвет из-за отсутствия или полного поглощения света.' },
+            ],
+            3: [
+                { word: 'curious', sentence: 'The cat was curious about the new box.', definition: 'Eager to know or learn something.', definition_ru: 'Стремление что-то узнать или изучить.' },
+                { word: 'achieve', sentence: 'With hard work, you can achieve your goals.', definition: 'To successfully bring about or reach by effort.', definition_ru: 'Успешно достичь или добиться чего-либо усилием.' },
+                { word: 'believe', sentence: 'I believe you can do it!', definition: 'To accept something as true; feel sure of the truth of.', definition_ru: 'Принимать что-либо за истину; быть уверенным в правдивости.' },
+                { word: 'separate', sentence: 'Please separate the white clothes from the colored ones.', definition: 'To cause to move or be apart.', definition_ru: 'Заставить двигаться или быть врозь.' },
+                { word: 'beautiful', sentence: 'The sunset was beautiful.', definition: 'Pleasing the senses or mind aesthetically.', definition_ru: 'Эстетически приятный для чувств или ума.' },
+                { word: 'important', sentence: 'It is important to be kind.', definition: 'Of great significance or value.', definition_ru: 'Имеющий большое значение или ценность.' },
+                { word: 'different', sentence: 'These two pictures are different.', definition: 'Not the same as another or each other.', definition_ru: 'Не такой же, как другой или друг друга.' },
+                { word: 'because', sentence: 'I am tired because I did not sleep well.', definition: 'For the reason that; since.', definition_ru: 'По той причине, что; так как.' },
+                { word: 'family', sentence: 'My family is very important to me.', definition: 'A group consisting of parents and children living together in a household.', definition_ru: 'Группа, состоящая из родителей и детей, живущих вместе в одном доме.' },
+                { word: 'listen', sentence: 'Please listen to the teacher.', definition: 'Give one\'s attention to a sound.', definition_ru: 'Уделять внимание звуку.' },
+                { word: 'people', sentence: 'There are many people at the park.', definition: 'Human beings in general or considered collectively.', definition_ru: 'Люди в целом или рассматриваемые коллективно.' },
+                { word: 'question', sentence: 'May I ask a question?', definition: 'A sentence worded so as to elicit information.', definition_ru: 'Предложение, сформулированное для получения информации.' },
+                { word: 'thought', sentence: 'That is an interesting thought.', definition: 'An idea or opinion produced by thinking.', definition_ru: 'Идея или мнение, возникшее в результате мышления.' },
+                { word: 'together', sentence: 'Let\'s go to the movies together.', definition: 'With or in proximity to another person or people.', definition_ru: 'С другим человеком или людьми или в непосредственной близости от них.' },
+                { word: 'usually', sentence: 'I usually wake up at 7 AM.', definition: 'Under normal conditions; generally.', definition_ru: 'В нормальных условиях; в общем.' },
+                { word: 'weather', sentence: 'The weather is nice today.', definition: 'The state of the atmosphere at a place and time.', definition_ru: 'Состояние атмосферы в определенном месте и в определенное время.' },
+                { word: 'animal', sentence: 'A lion is a wild animal.', definition: 'A living organism that feeds on organic matter.', definition_ru: 'Живой организм, питающийся органическими веществами.' },
+                { word: 'answer', sentence: 'Do you know the answer?', definition: 'A thing said, written, or done to deal with a question.', definition_ru: 'То, что сказано, написано или сделано в ответ на вопрос.' },
+                { word: 'circle', sentence: 'Draw a circle.', definition: 'A round plane figure whose boundary consists of points equidistant from a fixed point.', definition_ru: 'Круглая плоская фигура, граница которой состоит из точек, равноудаленных от фиксированной точки.' },
+                { word: 'country', sentence: 'Russia is a very large country.', definition: 'A nation with its own government, occupying a particular territory.', definition_ru: 'Нация со своим правительством, занимающая определенную территорию.' },
+            ],
+            4: [
+                { word: 'environment', sentence: 'We must protect our natural environment.', definition: 'The surroundings or conditions in which a person, animal, or plant lives.', definition_ru: 'Окружение или условия, в которых живет человек, животное или растение.' },
+                { word: 'necessary', sentence: 'Is it necessary to bring a jacket?', definition: 'Required to be done, achieved, or present; essential.', definition_ru: 'Требуемый к выполнению, достижению или наличию; существенный.' },
+                { word: 'opportunity', sentence: 'This is a great opportunity to learn something new.', definition: 'A set of circumstances that makes it possible to do something.', definition_ru: 'Совокупность обстоятельств, которая делает возможным что-либо сделать.' },
+                { word: 'knowledge', sentence: 'He has a lot of knowledge about history.', definition: 'Facts, information, and skills acquired through experience or education.', definition_ru: 'Факты, информация и навыки, приобретенные через опыт или образование.' },
+                { word: 'government', sentence: 'The government makes laws for the country.', definition: 'The group of people with the authority to govern a country or state.', definition_ru: 'Группа людей, обладающая властью управлять страной или государством.' },
+                { word: 'conscience', sentence: 'Let your conscience be your guide.', definition: 'An inner feeling or voice viewed as acting as a guide to the rightness or wrongness of one\'s behavior.', definition_ru: 'Внутреннее чувство или голос, рассматриваемый как руководство к правильности или неправильности поведения.' },
+                { word: 'discipline', sentence: 'Discipline is important for success.', definition: 'The practice of training people to obey rules or a code of behavior.', definition_ru: 'Практика обучения людей подчиняться правилам или кодексу поведения.' },
+                { word: 'embarrass', sentence: 'He tried not to embarrass his friend.', definition: 'Cause (someone) to feel awkward, self-conscious, or ashamed.', definition_ru: 'Вызвать у кого-либо чувство неловкости, смущения или стыда.' },
+                { word: 'exaggerate', sentence: 'He tends to exaggerate the truth.', definition: 'Represent (something) as being larger, better, or worse than it really is.', definition_ru: 'Представлять (что-либо) как большее, лучшее или худшее, чем оно есть на самом деле.' },
+                { word: 'foreign', sentence: 'She speaks several foreign languages.', definition: 'Of, from, in, or characteristic of a country or language other than one\'s own.', definition_ru: 'Относящийся к, происходящий из, находящийся в или характерный для страны или языка, отличного от собственного.' },
+                { word: 'guarantee', sentence: 'The watch comes with a two-year guarantee.', definition: 'A formal promise or assurance that certain conditions will be fulfilled.', definition_ru: 'Формальное обещание или заверение, что определенные условия будут выполнены.' },
+                { word: 'immediately', sentence: 'Please come here immediately.', definition: 'At once; instantly.', definition_ru: 'Сразу же; мгновенно.' },
+                { word: 'interrupt', sentence: 'It is rude to interrupt people.', definition: 'Stop the continuous progress of (an activity or process).', definition_ru: 'Прекратить непрерывный ход (деятельности или процесса).' },
+                { word: 'language', sentence: 'English is a global language.', definition: 'The method of human communication, either spoken or written.', definition_ru: 'Метод человеческого общения, устный или письменный.' },
+                { word: 'mischievous', sentence: 'The mischievous puppy chewed the shoes.', definition: 'Causing or showing a fondness for causing trouble in a playful way.', definition_ru: 'Вызывающий или проявляющий склонность к созданию проблем в игривой манере.' },
+                { word: 'occasionally', sentence: 'I occasionally drink coffee.', definition: 'At infrequent or irregular intervals; now and then.', definition_ru: 'С нечастыми или нерегулярными интервалами; время от времени.' },
+                { word: 'recommend', sentence: 'I would recommend this book.', definition: 'Put forward (someone or something) with approval as being suitable for a particular purpose.', definition_ru: 'Предлагать (кого-либо или что-либо) с одобрением как подходящее для определенной цели.' },
+                { word: 'sincerely', sentence: 'I sincerely hope you feel better soon.', definition: 'In a sincere or genuine way.', definition_ru: 'Искренним или подлинным образом.' },
+                { word: 'temperature', sentence: 'The temperature is very high today.', definition: 'The degree or intensity of heat present in a substance or object.', definition_ru: 'Степень или интенсивность тепла, присутствующего в веществе или объекте.' },
+                { word: 'vegetable', sentence: 'You should eat more vegetables.', definition: 'A plant or part of a plant used as food.', definition_ru: 'Растение или часть растения, используемая в пищу.' },
+            ],
+            5: [
+                { word: 'accommodation', sentence: 'The hotel provides excellent accommodation.', definition: 'A room, group of rooms, or building in which someone may live or stay.', definition_ru: 'Комната, группа комнат или здание, в котором кто-то может жить или останавливаться.' },
+                { word: 'bureaucracy', sentence: 'The project was delayed by bureaucracy.', definition: 'A system of government in which most of the important decisions are made by state officials.', definition_ru: 'Система правления, в которой большинство важных решений принимается государственными чиновниками.' },
+                { word: 'colleague', sentence: 'I will discuss it with my colleague.', definition: 'A person with whom one works in a profession or business.', definition_ru: 'Человек, с которым работают в одной профессии или бизнесе.' },
+                { word: 'conscientious', sentence: 'She is a very conscientious worker.', definition: 'Wishing to do one\'s work or duty well and thoroughly.', definition_ru: 'Желающий выполнять свою работу или обязанность хорошо и тщательно.' },
+                { word: 'entrepreneur', sentence: 'He is a successful entrepreneur.', definition: 'A person who sets up a business or businesses, taking on financial risks in the hope of profit.', definition_ru: 'Человек, который создает бизнес или бизнесы, принимая на себя финансовые риски в надежде на прибыль.' },
+                { word: 'Fahrenheit', sentence: 'The temperature is 70 degrees Fahrenheit.', definition: 'Of or denoting a scale of temperature on which water freezes at 32° and boils at 212°.', definition_ru: 'Относящийся к шкале температур, на которой вода замерзает при 32°, а кипит при 212°.' },
+                { word: 'fluorescent', sentence: 'The room was lit by a fluorescent lamp.', definition: '(of a substance) having or showing fluorescence.', definition_ru: '(о веществе) обладающий или проявляющий флуоресценцию.' },
+                { word: 'idiosyncrasy', sentence: 'Her habit of tapping her fingers is an idiosyncrasy.', definition: 'A mode of behavior or way of thought peculiar to an individual.', definition_ru: 'Способ поведения или образ мыслей, свойственный отдельному человеку.' },
+                { word: 'liaison', sentence: 'He acts as a liaison between the two departments.', definition: 'Communication or cooperation that facilitates a close working relationship between people or organizations.', definition_ru: 'Связь или сотрудничество, которое способствует тесным рабочим отношениям между людьми или организациями.' },
+                { word: 'millennium', sentence: 'We are living in a new millennium.', definition: 'A period of a thousand years.', definition_ru: 'Период в тысячу лет.' },
+                { word: 'onomatopoeia', sentence: 'The word "buzz" is an example of onomatopoeia.', definition: 'The formation of a word from a sound associated with what is named.', definition_ru: 'Образование слова от звука, связанного с тем, что оно называет.' },
+                { word: 'parliament', sentence: 'The bill was debated in parliament.', definition: 'The highest legislature, consisting of the sovereign, the House of Lords, and the House of Commons.', definition_ru: 'Высший законодательный орган, состоящий из монарха, Палаты лордов и Палаты общин.' },
+                { word: 'phenomenon', sentence: 'A rainbow is a natural phenomenon.', definition: 'A fact or situation that is observed to exist or happen, especially one whose cause or explanation is in question.', definition_ru: 'Факт или ситуация, которая наблюдается как существующая или происходящая, особенно та, чья причина или объяснение под вопросом.' },
+                { word: 'questionnaire', sentence: 'Please fill out this questionnaire.', definition: 'A set of printed or written questions with a choice of answers, devised for the purposes of a survey or statistical study.', definition_ru: 'Набор печатных или письменных вопросов с вариантами ответов, разработанный для целей опроса или статистического исследования.' },
+                { word: 'rhythm', sentence: 'The song has a great rhythm.', definition: 'A strong, regular repeated pattern of movement or sound.', definition_ru: 'Сильный, регулярно повторяющийся паттерн движения или звука.' },
+                { word: 'schedule', sentence: 'What is your schedule for tomorrow?', definition: 'A plan for carrying out a process or procedure, giving lists of intended events and times.', definition_ru: 'План выполнения процесса или процедуры, содержащий списки предполагаемых событий и времени.' },
+                { word: 'sovereignty', sentence: 'The country claimed sovereignty over the territory.', definition: 'Supreme power or authority.', definition_ru: 'Верховная власть или авторитет.' },
+                { word: 'susceptible', sentence: 'He is susceptible to colds.', definition: 'Likely or liable to be influenced or harmed by a particular thing.', definition_ru: 'Вероятно или подвержен влиянию или вреду от определенной вещи.' },
+                { word: 'unnecessary', sentence: 'That was an unnecessary comment.', definition: 'Not needed.', definition_ru: 'Ненужный.' },
+                { word: 'Wednesday', sentence: 'The meeting is on Wednesday.', definition: 'The day of the week before Thursday and following Tuesday.', definition_ru: 'День недели перед четвергом и после вторника.' },
+            ]
+        };
+
+        // --- Game State ---
+        let score = 0;
+        let currentWordIndex = 0;
+        let words = [];
+        let currentLevel = 1;
+        let isFetchingMagicHint = false;
+
+        // --- Gemini API Configuration ---
+        const API_KEY = ""; // Leave blank, it will be handled by the environment
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
+
+        // --- Speech Synthesis ---
+        const synth = window.speechSynthesis;
+        let preferredVoice = null;
+
+        function populateVoiceList() {
+            const voices = synth.getVoices().filter(voice => voice.lang.startsWith('en'));
+            preferredVoice = voices.find(voice => voice.name === 'Google US English') || voices[0] || synth.getVoices()[0];
+        }
+
+        populateVoiceList();
+        if (synth.onvoiceschanged !== undefined) {
+            synth.onvoiceschanged = populateVoiceList;
+        }
+
+        function speak(text, rate = 0.9) {
+            if (synth.speaking) {
+                synth.cancel();
+            }
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.voice = preferredVoice;
+            utterance.rate = rate;
+            utterance.pitch = 1;
+            synth.speak(utterance);
+        }
+        
+        // --- Confetti Logic ---
+        const ctx = confettiCanvas.getContext('2d');
+        let confettiParticles = [];
+        function triggerConfetti() {
+            confettiParticles = [];
+            const particleCount = 200;
+            const colors = ['#fde047', '#818cf8', '#67e8f9', '#4ade80', '#f472b6'];
+            for (let i = 0; i < particleCount; i++) {
+                confettiParticles.push({
+                    x: confettiCanvas.width / 2,
+                    y: confettiCanvas.height / 2,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    radius: Math.random() * 3 + 2,
+                    vx: Math.random() * 10 - 5,
+                    vy: Math.random() * -15 - 5,
+                    alpha: 1
+                });
+            }
+            animateConfetti();
+        }
+        function animateConfetti() {
+            ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+            confettiParticles.forEach((p, index) => {
+                p.x += p.vx; p.y += p.vy; p.vy += 0.1; p.alpha -= 0.01;
+                if (p.alpha <= 0) { confettiParticles.splice(index, 1); } 
+                else {
+                    ctx.globalAlpha = p.alpha; ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2, false);
+                    ctx.fillStyle = p.color; ctx.fill(); ctx.closePath();
+                }
+            });
+            if (confettiParticles.length > 0) { requestAnimationFrame(animateConfetti); } 
+            else { ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height); }
+        }
+        window.addEventListener('resize', () => {
+            confettiCanvas.width = window.innerWidth;
+            confettiCanvas.height = window.innerHeight;
+        });
+        confettiCanvas.width = window.innerWidth;
+        confettiCanvas.height = window.innerHeight;
+
+        // --- Game Logic ---
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function startGame(level) {
+            currentLevel = level;
+            score = 0;
+            currentWordIndex = 0;
+            words = shuffleArray([...wordBank[level]]);
+            
+            levelDisplay.textContent = `Level ${level}`;
+            updateScore();
+            updateProgressBar();
+            resetUI();
+            
+            levelSelectionScreen.classList.add('hidden');
+            gameOverModal.classList.add('hidden');
+            gameContainer.classList.remove('hidden');
+            
+            loadNextWord();
+        }
+
+        function loadNextWord() {
+            if (currentWordIndex >= words.length) {
+                endGame();
+                return;
+            }
+            resetUI();
+            setTimeout(() => {
+                speak(`The word is: ${words[currentWordIndex].word}`);
+            }, 500);
+        }
+        
+        function resetUI() {
+            spellingInput.value = '';
+            spellingInput.focus();
+            feedbackEl.textContent = '';
+            feedbackEl.className = 'mt-6 text-center text-2xl font-bold h-8';
+            hintText.innerHTML = `<span class="italic text-slate-300">Click a hint button for help.</span>`;
+            hintBox.classList.remove('bg-purple-900/50', 'bg-emerald-900/50');
+            magicHintBtn.disabled = false;
+        }
+
+        function updateScore() {
+            scoreEl.textContent = score;
+        }
+
+        function updateProgressBar() {
+            const progress = (currentWordIndex / words.length) * 100;
+            progressBar.style.width = `${progress}%`;
+        }
+
+        async function getMagicHint() {
+            if (isFetchingMagicHint || currentWordIndex >= words.length) return;
+
+            isFetchingMagicHint = true;
+            magicHintBtn.disabled = true;
+            hintText.innerHTML = `<span class="italic text-slate-300">✨ Thinking of a magic hint...</span>`;
+            hintBox.classList.add('bg-purple-900/50');
+            hintBox.classList.remove('bg-emerald-900/50');
+
+            const currentWord = words[currentWordIndex].word;
+            const prompt = `Give me a very simple and fun clue for a 6th-grade ESL student to guess the word '${currentWord}'. The clue should not use the word itself or its direct definition. Make it one short, creative sentence.`;
+
+            try {
+                const payload = {
+                    contents: [{ role: "user", parts: [{ text: prompt }] }],
+                };
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API request failed with status ${response.status}`);
+                }
+
+                const result = await response.json();
+                const generatedText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (generatedText) {
+                    hintText.innerHTML = `<p class="font-semibold">✨ <span class="font-normal">${generatedText.replace(/\"/g, "")}</span></p>`;
+                } else {
+                    hintText.textContent = 'Could not generate a magic hint. Try the normal hint!';
+                }
+
+            } catch (error) {
+                console.error('Gemini API Error:', error);
+                hintText.textContent = 'Magic hint is unavailable right now. Please try again later.';
+            } finally {
+                isFetchingMagicHint = false;
+                // Keep button disabled after one use per word
+            }
+        }
+
+        function handleAnswer(e) {
+            e.preventDefault();
+            const userAnswer = spellingInput.value.trim().toLowerCase();
+            const correctAnswer = words[currentWordIndex].word.toLowerCase();
+
+            if (userAnswer === correctAnswer) {
+                score++;
+                feedbackEl.textContent = 'Correct!';
+                feedbackEl.className = 'mt-6 text-center text-2xl font-bold h-8 text-green-400 feedback-animation';
+                triggerConfetti();
+            } else {
+                feedbackEl.textContent = `Not quite! It's spelled: ${correctAnswer}`;
+                feedbackEl.className = 'mt-6 text-center text-2xl font-bold h-8 text-rose-400 feedback-animation';
+            }
+            
+            updateScore();
+            currentWordIndex++;
+            updateProgressBar();
+
+            spellingInput.disabled = true;
+            magicHintBtn.disabled = true; // Disable until next word
+            setTimeout(() => {
+                spellingInput.disabled = false;
+                loadNextWord();
+            }, 2500);
+        }
+
+        function endGame() {
+            finalScoreEl.textContent = `${score} / ${words.length}`;
+            gameContainer.classList.add('hidden');
+            gameOverModal.classList.remove('hidden');
+        }
+
+        function returnToLevelSelect() {
+            gameOverModal.classList.add('hidden');
+            levelSelectionScreen.classList.remove('hidden');
+        }
+
+        // --- Event Listeners ---
+        levelSelectionScreen.addEventListener('click', (e) => {
+            if (e.target.matches('button[data-level]')) {
+                const level = e.target.dataset.level;
+                startGame(level);
+            }
+        });
+
+        repeatWordBtn.addEventListener('click', () => {
+            if (currentWordIndex < words.length) {
+                speak(`The word is: ${words[currentWordIndex].word}`);
+            }
+        });
+
+        sentenceBtn.addEventListener('click', () => {
+            if (currentWordIndex < words.length) {
+                speak(words[currentWordIndex].sentence, 0.85);
+            }
+        });
+
+        hintBtn.addEventListener('click', () => {
+            if (currentWordIndex < words.length) {
+                const hint = words[currentWordIndex];
+                hintText.innerHTML = `
+                    <div class="text-left">
+                        <p class="font-semibold">EN: <span class="font-normal">${hint.definition}</span></p>
+                        <p class="font-semibold mt-1">RU: <span class="font-normal">${hint.definition_ru}</span></p>
+                    </div>
+                `;
+                hintBox.classList.add('bg-emerald-900/50');
+                hintBox.classList.remove('bg-purple-900/50');
+            }
+        });
+        
+        magicHintBtn.addEventListener('click', getMagicHint);
+
+        spellingForm.addEventListener('submit', handleAnswer);
+        playAgainBtn.addEventListener('click', returnToLevelSelect);
+        
+    </script>
+</body>
+</html>
