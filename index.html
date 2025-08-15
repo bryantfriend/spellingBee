@@ -240,8 +240,6 @@
         const API_KEY = ""; // Leave blank, it will be handled by the environment
         const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
 
-        // --- Speech Synthesis ---
-        const synth = window.speechSynthesis;
         
         // --- Confetti Logic ---
         const ctx = confettiCanvas.getContext('2d');
@@ -394,23 +392,27 @@
             return array;
         }
 
-        function startGame(level) {
-            currentLevel = level;
-            score = 0;
-            currentWordIndex = 0;
-            words = shuffleArray([...wordBank[level]]);
-            
-            levelDisplay.textContent = `Level ${level}`;
-            updateScore();
-            updateProgressBar();
-            resetUI();
-            
-            levelSelectionScreen.classList.add('hidden');
-            gameOverModal.classList.add('hidden');
-            gameContainer.classList.remove('hidden');
-            
-            loadNextWord();
-        }
+async function startGame(level) {
+  currentLevel = level;
+  score = 0;
+  currentWordIndex = 0;
+  words = shuffleArray([...wordBank[level]]);
+
+  levelDisplay.textContent = `Level ${level}`;
+  updateScore();
+  updateProgressBar();
+  resetUI();
+
+  levelSelectionScreen.classList.add('hidden');
+  gameOverModal.classList.add('hidden');
+  gameContainer.classList.remove('hidden');
+
+  // Pre-warm the Gemini TTS in the same user-gesture turn
+  await speak("Let's play the Cosmic Spelling Bee!", true); // silent prefetch
+
+  loadNextWord();
+}
+
 
         function loadNextWord() {
             if (currentWordIndex >= words.length) {
@@ -495,7 +497,7 @@
 
         sentenceBtn.addEventListener('click', () => {
             if (currentWordIndex < words.length) {
-                speak(words[currentWordIndex].sentence, 0.85);
+                speak(words[currentWordIndex].sentence);
             }
         });
 
